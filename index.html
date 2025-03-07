@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анімація Серця</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #ffccd5;
+            /* Блідий рожевий фон */
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Блок для текстових повідомлень */
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-weight: bold;
+            color: white;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        /* Адаптивність для мобільних */
+        @media (max-width: 768px) {
+            #message {
+                font-size: 30px;
+            }
+        }
+
+        /* Для ноутбуків */
+        @media (min-width: 1024px) {
+            #message {
+                font-size: 60px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="heartCanvas"></canvas>
+    <div id="message"></div>
+    <script>
+        const canvas = document.getElementById("heartCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const particlesArray = [];
+        const numberOfParticles = 1000; // Кількість точок
+        let animationComplete = false;
+        let startAnimation = false; // Коли починається рух частинок
+        let currentText = "З 8 БЕРЕЗНЯ АЛІНКА!"; // Початковий текст
+        let heartPath = null; // Шлях серця для подальшого використання
+
+        const gridSize = 20; // Рівномірна відстань між точками
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.targetX = x;
+                this.targetY = y;
+                this.size = 2;
+                this.color = "red";
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.fill();
+            }
+            update() {
+                if (startAnimation) {
+                    let dx = this.targetX - this.x;
+                    let dy = this.targetY - this.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    let speed = 0.03; // Сповільнене переміщення
+                    if (distance > 0.1) {
+                        this.x += dx * speed;
+                        this.y += dy * speed;
+                    }
+                }
+            }
+        }
+
+        // Функція для обчислення координат перевернутого серця (на 180°)
+        function heartShape(t) {
+            const x = 16 * Math.pow(Math.sin(t), 3);
+            const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+            return { x, y };
+        }
+
+        function init() {
+            particlesArray.length = 0;
+            // Розставляємо точки рівномірно (як у сітці)
+            const rows = Math.floor(canvas.height / gridSize);
+            const cols = Math.floor(canvas.width / gridSize);
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const x = col * gridSize + gridSize / 2;
+                    const y = row * gridSize + gridSize / 2;
+                    particlesArray.push(new Particle(x, y));
+                }
+            }
+            // Обчислюємо цільові координати для формування форми серця
+            let t = 0;
+            const heartPoints = [];
+            while (t <= Math.PI * 2) {
+                const { x, y } = heartShape(t);
+                heartPoints.push({ x: x * 20 + canvas.width / 2, y: y * 20 + canvas.height / 3 });
+                t += Math.PI / (numberOfParticles / 2);
+            }
+            // Призначаємо кожній точці цільові координати
+            for (let i = 0; i < particlesArray.length; i++) {
+                const target = heartPoints[i % heartPoints.length];
+                particlesArray[i].targetX = target.x;
+                particlesArray[i].targetY = target.y;
+            }
+            // Затримка 5 секунд перед початком анімації
+            setTimeout(() => {
+                startAnimation = true;
+            }, 5000);
+        }
+
+        function drawHeart() {
+            // Малюємо заповнене перевернуте серце лише один раз
+            if (!heartPath) {
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2, canvas.height / 3 + 20); for (let t = 0; t <= Math.PI * 2; t += Math.PI / 100) {
+                                const { x, y } = heartShape(t);
+                                ctx.lineTo(x * 20 + canvas.width / 2, y * 20 + canvas.height / 3);
+                            }
+                            ctx.closePath();
+                            ctx.fillStyle = "red";
+                            ctx.fill();
+                            heartPath = true; // Установлюємо, що серце вже намальовано
+                        }
+                    }
+
+                    // Функції для роботи з повідомленнями
+                    const messageElement = document.getElementById("message");
+                    function showMessage(text) {
+                        messageElement.innerText = text;
+                        messageElement.style.opacity = 1;
+                    }
+                    function hideMessage(callback) {
+                        messageElement.style.opacity = 0;
+                        setTimeout(callback, 1000);
+                    }
+                    function changeMessage() {
+                        hideMessage(() => {
+                            currentText = "Я ТЕБЕ БЕЗМЕЖНО КОХАЮ❤️";
+                            showMessage(currentText);
+                        });
+                    }
+
+                    function animate() {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        // Оновлюємо та малюємо кожну точку
+                        for (let i = 0; i < particlesArray.length; i++) {
+                            particlesArray[i].update();
+                            particlesArray[i].draw();
+                        }
+                        // Якщо всі точки досягли своїх цільових координат, малюємо червоне серце
+                        if (!animationComplete && particlesArray.every(p => Math.abs(p.x - p.targetX) < 1 && Math.abs(p.y - p.targetY) < 1)) {
+                            animationComplete = true;
+                            drawHeart();
+                            // Після короткого затримання показуємо перший текст
+                            setTimeout(() => {
+                                showMessage(currentText);
+                                // Через 5 секунд змінюємо текст
+                                setTimeout(changeMessage, 5000);
+                            }, 500);
+                        }
+                        requestAnimationFrame(animate);
+                    }
+
+                    init();
+                    animate();
+              </script>
+</body>
+
+</html>
